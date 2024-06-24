@@ -17,8 +17,7 @@
     "fs": "^0.0.1-security",
     "mongodb": "^6.7.0",
     "mongoose": "^8.4.3",
-    "node-cron": "^3.0.3",
-    "xlsx": "^0.18.5"
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
