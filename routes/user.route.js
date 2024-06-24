@@ -1,10 +1,7 @@
 const app = require("express").Router();
-const e = require("express");
 const User = require("../models/user.model");
 
 const emailRegex = /^\d\d\w\w\d\d\d@mgits\.ac\.in$/;
-
-// 21 CS 051 @mgits.ac.in
 
 async function userReg(email, registerId, res) {
   if (!emailRegex.test(email)) {

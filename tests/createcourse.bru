@@ -1,0 +1,18 @@
+meta{
+    name: Create Course
+    type: http
+}
+
+post{
+    url: http://localhost:3000/admin/create
+}
+
+body{
+    {
+        "courseCode": "CSE121",
+        "courseName": "Introduction to Computer Science",
+        "offeringDepartment": "CS",
+        "seatsAvailable": 60,
+        "accessibleBy": ["CS", "EC", "EEE"]
+    }
+}

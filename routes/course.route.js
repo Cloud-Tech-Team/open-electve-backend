@@ -1,35 +1,19 @@
-// Assuming you have a courseId and want to decrease seatsAvailable by 1
-const courseId = "someCourseId";
+const app = require("express").Router();
 const Course = require("../models/course.model");
-const mongoose = require("mongoose");
-
-
-Course.aggregate([
-  {
-    $match: {
-      _id: mongoose.Types.ObjectId(courseId) // Match the course by ID
+app.post("/select", async (req, res) => {
+  const courseId = req.body.courseId;
+  console.log('courseId', courseId);
+  Course.findOneAndUpdate(
+    { courseCode: courseId, seatsAvailable: { $gt: 0 } },
+    { $inc: { seatsAvailable: -1 } },
+    { returnDocument: 'after' }
+  ).then((result) => {
+    console.log('result', result);
+    if (!result) {
+      return res.send(400);
     }
-  },
-  {
-    $addFields: {
-      seatsAvailable: {
-        $cond: {
-          if: { $gt: ["$seatsAvailable", 0] }, // Check if seatsAvailable is greater than 0
-          then: { $subtract: ["$seatsAvailable", 1] }, // Decrease seatsAvailable by 1
-          else: "$seatsAvailable" // Leave seatsAvailable unchanged if it's 0 or less
-        }
-      }
-    }
-  },
-  {
-    $merge: {
-      into: "courses", // Merge the results back into the courses collection
-      on: "_id", // Merge on the _id field
-      whenMatched: "replace" // Replace the document in the collection with the aggregation result
-    }
-  }
-]).then(result => {
-  console.log("Aggregation executed", result);
-}).catch(err => {
-  console.error("Error executing aggregation", err);
+    return res.send(200);
+  });
 });
+
+module.exports = app;

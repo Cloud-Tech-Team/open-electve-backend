@@ -6,12 +6,14 @@ const bodyParser = require("body-parser");
 dotenv.config();
 
 app.use(bodyParser.json());
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("Hello World up");
 });
 
-// app.get("/courses", require("./routes/course.route.js"));
+app.use("/courses", require("./routes/course.route"));
+app.use("/admin", require("./routes/admin.route"));
 
 app.use("/", require("./routes/user.route.js"));
 
