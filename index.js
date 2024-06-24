@@ -5,8 +5,7 @@ const dotenv = require("dotenv");
 const bodyParser = require("body-parser");
 dotenv.config();
 
-app.use(bodyParser.json())
-
+app.use(bodyParser.json());
 
 app.get("/", (req, res) => {
   res.send("Hello World up");
@@ -25,6 +24,6 @@ mongoose
       console.log("Server is running on port 3000");
     });
   })
-  .catch(() => {
-    console.log("connection failed");
+  .catch((err) => {
+    console.log(err);
   });
