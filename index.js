@@ -13,6 +13,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/courses", require("./routes/course.route"));
+
 app.use("/admin", require("./routes/admin.route"));
 
 app.use("/", require("./routes/user.route.js"));
