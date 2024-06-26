@@ -1,6 +1,9 @@
 const app = require("express").Router();
 const Course = require("../models/course.model");
 
+
+
+
 app.post("/select", async (req, res) => {
   const courseId = req.body.courseId;
   console.log("courseId", courseId);
@@ -17,12 +20,23 @@ app.post("/select", async (req, res) => {
   });
 });
 
-app.get("/allcourses", async (req, res) => {
-  Course.find({}).then((result) => {
+
+
+app.post("/allcourses", async (req, res) => {
+  console.log("Department: ",req.body)
+  Course.find({accessibleBy: req.body.department}).then((result) => {
     if (!result) {
       return res.send(400);
     }
-    return res.send(result);
+    console.log(result)
+    const response = result.map(course => {
+      return {
+        courseId: course.courseCode,
+        courseName: course.courseName,
+        seatsAvailable: course.seatsAvailable,
+      }
+    })
+    return res.send(response);
   });
 });
 

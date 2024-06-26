@@ -1,17 +1,20 @@
-meta{
-    name: Create Course
-    type: http
+meta {
+  name: Create Course
+  type: http
+  seq: 1
 }
 
-post{
-    url: http://localhost:3000/admin/create
+post {
+  url: http://localhost:3000/admin/create
+  body: json
+  auth: none
 }
 
-body{
+body:json {
     {
-        "courseCode": "CSE121",
-        "courseName": "Introduction to Computer Science",
-        "offeringDepartment": "CS",
+        "courseCode": "CE 251",
+        "courseName": "Hawk Thuth",
+        "offeringDepartment": "CE",
         "seatsAvailable": 60,
         "accessibleBy": ["CS", "EC", "EEE"]
     }
