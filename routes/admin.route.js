@@ -11,7 +11,7 @@ app.post("/create", async (req, res) => {
   // }
   course.save().then((result) => {
     if (!result) {
-      return res.send(200);
+      return res.sendStatus(200);
     }
     return res.status(400);
   });
