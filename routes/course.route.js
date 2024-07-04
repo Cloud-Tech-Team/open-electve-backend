@@ -10,7 +10,6 @@ app.post("/select", async (req, res) => {
     { $inc: { seatsAvailable: -1 } },
     { returnDocument: "after" }
   ).then((result) => {
-    console.log("result", result);
     if (!result) {
       return res.sendStatus(412);
     } else {
@@ -19,16 +18,16 @@ app.post("/select", async (req, res) => {
           email: req.body.email,
         },
         { optedCourse: courseId }
-      ).then((result) => {
-        console.log("result", result);
+      ).then((result) => { 
         if (!result) {
           return res.sendStatus(412);
         }
+        console.log(req.body.email, "registed", courseId);
         return res.sendStatus(200);
       });
     }
   });
-}); 
+});
 
 app.post("/allcourses", async (req, res) => {
   console.log("Department: ", req.body);

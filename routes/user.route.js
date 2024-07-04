@@ -13,7 +13,7 @@ app.post("/register", async (req, res) => {
     }
     await userReg(name, email, registerId, res);
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(400).send(err);
   }
 });
