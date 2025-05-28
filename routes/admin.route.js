@@ -298,7 +298,6 @@ app.post("/users", async (req, res) => {
         `
       )
       .join("");
-    console.log(users);
 
     // Helper function to convert string to title case
 
