@@ -2,6 +2,7 @@ const app = require("express").Router();
 const Course = require("../models/course.model");
 const path = require("path");
 const User = require("../models/user.model");
+const AdminSettings = require("../models/admin-settings.model");
 const logger = require("../utils/logger");
 
 function titleCase(str) {
@@ -506,6 +507,99 @@ app.get("/", (req, res) => {
     logger.error("Error serving admin dashboard:", error);
     logger.request("GET", "/admin/", clientIP, 500);
     res.status(500).send("Error loading admin dashboard");
+  }
+});
+
+// Get current admin settings
+app.post("/settings", async (req, res) => {
+  const clientIP = req.ip;
+
+  logger.request("POST", "/admin/settings", clientIP);
+
+  if (req.headers.authorization !== process.env.SECRETKEY) {
+    logger.auth(
+      "ADMIN_ACCESS",
+      clientIP,
+      false,
+      "Invalid secret key for settings endpoint"
+    );
+    return res.status(401).send("Unauthorized");
+  }
+
+  logger.auth("ADMIN_ACCESS", clientIP, true, "Settings data access");
+
+  try {
+    const settings = await AdminSettings.getSettings();
+    const currentTime = new Date();
+    const allowedTime = new Date(settings.allowedDateTime);
+    const isAllowed = settings.isEnabled && currentTime >= allowedTime;
+    
+    logger.success("Settings data retrieved successfully");
+    logger.request("POST", "/admin/settings", clientIP, 200);
+    
+    return res.status(200).json({
+      allowedDateTime: settings.allowedDateTime,
+      isEnabled: settings.isEnabled,
+      currentTime: currentTime.toISOString(),
+      isCurrentlyAllowed: isAllowed
+    });
+  } catch (error) {
+    logger.error("Error fetching settings:", error);
+    logger.request("POST", "/admin/settings", clientIP, 500);
+    return res.status(500).send("Internal Server Error");
+  }
+});
+
+// Update admin settings
+app.post("/settings/update", async (req, res) => {
+  const clientIP = req.ip;
+
+  logger.request("POST", "/admin/settings/update", clientIP);
+
+  if (req.headers.authorization !== process.env.SECRETKEY) {
+    logger.auth(
+      "ADMIN_ACCESS",
+      clientIP,
+      false,
+      "Invalid secret key for settings update endpoint"
+    );
+    return res.status(401).send("Unauthorized");
+  }
+
+  logger.auth("ADMIN_ACCESS", clientIP, true, "Settings update access");
+
+  try {
+    const { allowedDateTime, isEnabled } = req.body;
+    
+    if (!allowedDateTime) {
+      return res.status(400).json({
+        error: "allowedDateTime is required"
+      });
+    }
+
+    const updateData = {
+      allowedDateTime: new Date(allowedDateTime),
+      isEnabled: isEnabled !== undefined ? isEnabled : true
+    };
+
+    const settings = await AdminSettings.updateSettings(updateData);
+    
+    logger.success(`Settings updated - DateTime: ${settings.allowedDateTime}, Enabled: ${settings.isEnabled}`);
+    logger.request("POST", "/admin/settings/update", clientIP, 200);
+    
+    return res.status(200).json({
+      message: "Settings updated successfully",
+      settings: {
+        allowedDateTime: settings.allowedDateTime,
+        isEnabled: settings.isEnabled
+      }
+    });
+  } catch (error) {
+    logger.error("Error updating settings:", error);
+    logger.request("POST", "/admin/settings/update", clientIP, 500);
+    return res.status(500).json({
+      error: "Internal Server Error"
+    });
   }
 });
 

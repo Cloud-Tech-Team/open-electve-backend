@@ -71,6 +71,7 @@ app.use((req, res, next) => {
 
 app.use("/courses", require("./routes/course.route"));
 app.use("/admin", require("./routes/admin.route"));
+app.use("/", require("./routes/allowed.route"));
 app.use("/", require("./routes/user.route.js"));
 
 // ✅ WebSocket Events

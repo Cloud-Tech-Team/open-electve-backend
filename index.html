@@ -84,10 +84,8 @@
                         </button>
                     </div>
                     <div id="course-creation-result" class="mt-4"></div>
-                </div>
-
-                <!-- Reset Operations Section -->
-                <div class="bg-white shadow-md rounded-lg p-6">
+                </div>                <!-- Reset Operations Section -->
+                <div class="bg-white shadow-md rounded-lg p-6 mb-4">
                     <h3 class="text-lg font-semibold mb-4 text-red-700">Reset Operations</h3>
                     <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
                         <p class="text-sm text-red-800">
@@ -109,6 +107,67 @@
                         </button>
                     </div>
                     <div id="reset-operation-result" class="mt-4"></div>
+                </div>
+
+                <!-- Access Control Section -->
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4 text-blue-700">Access Control Settings</h3>
+                    <div class="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+                        <p class="text-sm text-blue-800">
+                            <strong>Info:</strong> Control when users can access the system by setting an allowed date and time.
+                        </p>
+                    </div>
+                    
+                    <!-- Current Status -->
+                    <div class="mb-4 p-3 bg-gray-50 rounded-md">
+                        <h4 class="font-medium mb-2">Current Status</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600">Current Time:</span>
+                                <span id="current-time" class="font-mono ml-2">Loading...</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Access Status:</span>
+                                <span id="access-status" class="ml-2 px-2 py-1 rounded text-xs font-medium">Loading...</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Allowed From:</span>
+                                <span id="allowed-time" class="font-mono ml-2">Loading...</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Control Enabled:</span>
+                                <span id="control-enabled" class="ml-2 px-2 py-1 rounded text-xs font-medium">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Form -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Allowed Date & Time</label>
+                            <input type="datetime-local" id="allowedDateTime" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="isEnabled" checked
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">Enable Access Control</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <button onclick="updateAccessSettings()" 
+                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Update Settings
+                        </button>
+                        <button onclick="loadAccessSettings()" 
+                                class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                            Reload Current Settings
+                        </button>
+                    </div>
+                    <div id="access-settings-result" class="mt-4"></div>
                 </div>
             </div>
         </div>
@@ -198,14 +257,53 @@
                     <span class="text-xs text-gray-500 last-updated"></span>
                 </div>
             </div>
-            <div class="bg-white shadow-md rounded-lg overflow-hidden">
-                <script>
+            <div class="bg-white shadow-md rounded-lg overflow-hidden">                <script>
                     var password = sessionStorage.getItem('adminPassword');
-                    if (!password) {
-                        password = prompt("Enter Admin Password:", "some password that advaith would know");
-                        if (password) {
-                            sessionStorage.setItem('adminPassword', password);
+                    
+                    function requirePassword() {
+                        while (!password) {
+                            password = prompt("Enter Admin Password to access the dashboard:", "");
+                            if (password === null) {
+                                // User pressed Cancel or Escape
+                                alert("Admin password is required to access this dashboard. The page will reload.");
+                                window.location.reload();
+                                return false;
+                            } else if (password.trim() === "") {
+                                // User entered empty string
+                                password = null;
+                                alert("Password cannot be empty. Please enter a valid password.");
+                            } else {
+                                // Valid password entered
+                                sessionStorage.setItem('adminPassword', password);
+                                return true;
+                            }
                         }
+                        return true;
+                    }
+                      // Ensure password is required before continuing
+                    if (!requirePassword()) {
+                        throw new Error("Authentication required");
+                    }                    // Helper function to validate password before API calls
+                    function validatePassword() {
+                        if (!password || password.trim() === "") {
+                            alert("Session expired. Please enter your password again.");
+                            sessionStorage.removeItem('adminPassword');
+                            return requirePassword();
+                        }
+                        return true;
+                    }
+
+                    // Helper function to validate password with timeout support
+                    function validatePasswordWithTimeout() {
+                        return validatePassword();
+                    }
+
+                    // Function to get validated password for HTMX headers
+                    function getValidatedPassword() {
+                        if (!validatePassword()) {
+                            throw new Error("Authentication required");
+                        }
+                        return password;
                     }
 
                     // Auto-refresh control variables
@@ -383,10 +481,17 @@
                                     setTimeout(() => {
                                         document.getElementById('courseCode').focus();
                                     }, 100);
-                                    break;
-                                case 'a':
+                                    break;                                case 'a':
                                     e.preventDefault();
                                     toggleAdminActions();
+                                    break;
+                                case 's':
+                                    e.preventDefault();
+                                    updateAccessSettings();
+                                    break;
+                                case 'l':
+                                    e.preventDefault();
+                                    loadAccessSettings();
                                     break;
                             }
                         }
@@ -419,6 +524,8 @@
 
                     // Course creation functions
                     function createCourse() {
+                        if (!validatePasswordWithTimeout()) return;
+                        
                         const bulkJson = document.getElementById('bulkCourseJson').value.trim();
                         let courseData;
 
@@ -474,9 +581,9 @@
                                 `;
                                 clearCourseForm();
                                 // Refresh course statistics
-                                refreshCourseData();
-                            })
+                                refreshCourseData();                            })
                             .catch(error => {
+                                handleApiError(error, "creating course");
                                 const resultDiv = document.getElementById('course-creation-result');
                                 resultDiv.innerHTML = `
                                     <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -525,6 +632,8 @@
                             performReset(endpoints[type], type);
                         }
                     }                    function performReset(endpoint, type) {
+                        if (!validatePasswordWithTimeout()) return;
+                        
                         const resultDiv = document.getElementById('reset-operation-result');
                         resultDiv.innerHTML = `
                             <div class="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
@@ -565,18 +674,16 @@
                             }
                             if (type === 'users' || type === 'all') {
                                 refreshUserData();
-                            }
-                        })
+                            }                        })
                         .catch(error => {
+                            handleApiError(error, "performing reset operation");
                             resultDiv.innerHTML = `
                                 <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
                                     <strong>Error:</strong> ${error.message}
                                 </div>
                             `;
                         });
-                    }
-
-                    // Admin Actions toggle function
+                    }// Admin Actions toggle function
                     function toggleAdminActions() {
                         const content = document.getElementById('admin-actions-content');
                         const chevron = document.getElementById('admin-actions-chevron');
@@ -590,6 +697,188 @@
                             chevron.style.transform = 'rotate(0deg)';
                         }
                     }
+
+                    // Access Control Functions
+                    function updateCurrentTime() {
+                        const now = new Date();
+                        const timeString = now.toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        document.getElementById('current-time').textContent = timeString;
+                    }                    function loadAccessSettings() {
+                        if (!validatePasswordWithTimeout()) return;
+                        
+                        const resultDiv = document.getElementById('access-settings-result');
+                        resultDiv.innerHTML = '<div class="text-blue-600">Loading current settings...</div>';
+
+                        fetch('/admin/settings', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': password,
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json();
+                            } else if (response.status === 401) {
+                                throw new Error('Unauthorized - Invalid admin password');
+                            } else {
+                                throw new Error('Failed to load settings');
+                            }
+                        })
+                        .then(data => {
+                            // Update form fields
+                            if (data.allowedDateTime) {
+                                const date = new Date(data.allowedDateTime);
+                                const localISOTime = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                                document.getElementById('allowedDateTime').value = localISOTime;
+                            }
+                            document.getElementById('isEnabled').checked = data.isEnabled || false;
+
+                            // Update status display
+                            updateAccessStatus(data);                            resultDiv.innerHTML = `
+                                <div class="p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                                    <strong>Success:</strong> Settings loaded successfully
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            handleApiError(error, "loading access settings");
+                            resultDiv.innerHTML = `
+                                <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                                    <strong>Error:</strong> ${error.message}
+                                </div>
+                            `;
+                        });
+                    }                    function updateAccessSettings() {
+                        if (!validatePasswordWithTimeout()) return;
+                        
+                        const allowedDateTime = document.getElementById('allowedDateTime').value;
+                        const isEnabled = document.getElementById('isEnabled').checked;
+                        const resultDiv = document.getElementById('access-settings-result');
+
+                        if (!allowedDateTime) {
+                            resultDiv.innerHTML = `
+                                <div class="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                                    <strong>Warning:</strong> Please select a date and time
+                                </div>
+                            `;
+                            return;
+                        }
+
+                        resultDiv.innerHTML = '<div class="text-blue-600">Updating settings...</div>';
+
+                        const requestData = {
+                            allowedDateTime: new Date(allowedDateTime).toISOString(),
+                            isEnabled: isEnabled
+                        };
+
+                        fetch('/admin/settings/update', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': password,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(requestData)
+                        })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json();
+                            } else if (response.status === 401) {
+                                throw new Error('Unauthorized - Invalid admin password');
+                            } else {
+                                throw new Error('Failed to update settings');
+                            }
+                        })
+                        .then(data => {
+                            updateAccessStatus(data);                            resultDiv.innerHTML = `
+                                <div class="p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                                    <strong>Success:</strong> Access control settings updated successfully
+                                </div>
+                            `;
+                        })
+                        .catch(error => {
+                            handleApiError(error, "updating access settings");
+                            resultDiv.innerHTML = `
+                                <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                                    <strong>Error:</strong> ${error.message}
+                                </div>
+                            `;
+                        });
+                    }
+
+                    function updateAccessStatus(data) {
+                        // Update allowed time display
+                        if (data.allowedDateTime) {
+                            const allowedDate = new Date(data.allowedDateTime);
+                            const allowedTimeString = allowedDate.toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                            document.getElementById('allowed-time').textContent = allowedTimeString;
+                        } else {
+                            document.getElementById('allowed-time').textContent = 'Not set';
+                        }
+
+                        // Update control enabled status
+                        const controlEnabledElement = document.getElementById('control-enabled');
+                        if (data.isEnabled) {
+                            controlEnabledElement.textContent = 'Enabled';
+                            controlEnabledElement.className = 'ml-2 px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800';
+                        } else {
+                            controlEnabledElement.textContent = 'Disabled';
+                            controlEnabledElement.className = 'ml-2 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800';
+                        }
+
+                        // Update access status
+                        checkAccessStatus();
+                    }
+
+                    function checkAccessStatus() {
+                        fetch('/allowed')
+                        .then(response => response.json())
+                        .then(data => {
+                            const accessStatusElement = document.getElementById('access-status');
+                            if (data.allowed) {
+                                accessStatusElement.textContent = 'ALLOWED';
+                                accessStatusElement.className = 'ml-2 px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800';
+                            } else {
+                                accessStatusElement.textContent = 'BLOCKED';
+                                accessStatusElement.className = 'ml-2 px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error checking access status:', error);
+                            const accessStatusElement = document.getElementById('access-status');
+                            accessStatusElement.textContent = 'ERROR';
+                            accessStatusElement.className = 'ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800';
+                        });
+                    }
+
+                    // Initialize Access Control on page load
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Update current time immediately and then every second
+                        updateCurrentTime();
+                        setInterval(updateCurrentTime, 1000);
+
+                        // Load initial access settings
+                        setTimeout(loadAccessSettings, 500);
+
+                        // Refresh access status every 30 seconds
+                        setInterval(checkAccessStatus, 30000);
+                    });
                 </script>
                 <table class="table-auto w-full">
                     <thead class="bg-gray-50">
@@ -616,14 +905,15 @@
             hx-swap="innerHTML" hx-target="#download-link">Export CSV</button>
         <div id="download-link" class="mt-2"></div>        <!-- Keyboard Shortcuts Help -->
         <div class="mt-8 bg-gray-50 border rounded-lg p-4">
-            <h3 class="text-sm font-semibold text-gray-700 mb-2">Keyboard Shortcuts:</h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Keyboard Shortcuts:</h3>            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600">
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+A</kbd> Toggle Admin Actions</div>
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+N</kbd> New Course Form</div>
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+R</kbd> Refresh All</div>
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+C</kbd> Refresh Courses</div>
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+U</kbd> Refresh Users</div>
                 <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+P</kbd> Toggle Auto-refresh</div>
+                <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+S</kbd> Update Access Settings</div>
+                <div><kbd class="bg-gray-200 px-1 rounded">Ctrl+L</kbd> Load Access Settings</div>
                 <div class="col-span-2 md:col-span-1"><kbd class="bg-gray-200 px-1 rounded">Ctrl+Shift+Del</kbd> Reset All (Dangerous!)</div>
             </div>
         </div>
