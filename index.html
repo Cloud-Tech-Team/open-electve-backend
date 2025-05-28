@@ -213,7 +213,7 @@
                     let refreshInterval = null;
 
                     // WebSocket connection for real-time course count
-                    const socket = io('http://localhost:3000');
+                    const socket = io();
 
                     socket.on('connect', () => {
                         console.log('Connected to WebSocket server');
