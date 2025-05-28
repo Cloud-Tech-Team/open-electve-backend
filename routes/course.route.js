@@ -56,14 +56,17 @@ app.post("/select", async (req, res) => {
     }
 
     logger.success(`${email} successfully registered for ${courseId}`);
-    logger.database('UPDATE', 'users', `User ${email} opted for ${courseId}`);
-
-    // ✅ Emit update to Socket.IO room
+    logger.database('UPDATE', 'users', `User ${email} opted for ${courseId}`);    // ✅ Emit update to Socket.IO room
     req.io.to(courseId).emit("courseUpdated", {
       courseId: course.courseCode,
       seatsAvailable: course.seatsAvailable,
     });
     logger.info(`Socket.IO update sent for course ${courseId} - ${course.seatsAvailable} seats remaining`);
+
+    // ✅ Broadcast course statistics update to all connected clients
+    if (req.broadcastCourseStatistics) {
+      req.broadcastCourseStatistics();
+    }
 
     logger.request('POST', '/courses/select', clientIP, 200);
     return res.status(200).json({ seatsAvailable: course.seatsAvailable });

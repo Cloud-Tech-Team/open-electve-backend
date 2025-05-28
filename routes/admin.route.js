@@ -4,6 +4,15 @@ const path = require("path");
 const User = require("../models/user.model");
 const logger = require("../utils/logger");
 
+function titleCase(str) {
+    if (!str) return str;
+    return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 // Serve static files from exports directory
 app.use(
   "/exports",
@@ -82,12 +91,16 @@ app.post("/create", async (req, res) => {
           error: courseError.message,
         });
       }
-    }
-
-    // Log final results
+    }    // Log final results
     logger.info(
       `Course creation completed - Success: ${results.length}, Errors: ${errors.length}`
-    );
+    );    // Broadcast course count update if any courses were created
+    if (results.length > 0) {
+      req.broadcastCourseCount();
+      if (req.broadcastCourseStatistics) {
+        req.broadcastCourseStatistics();
+      }
+    }
 
     // Return appropriate response
     if (errors.length === 0) {
@@ -140,14 +153,17 @@ app.post("/reset/all", async (req, res) => {
   }
 
   logger.auth("ADMIN_ACCESS", clientIP, true, "Reset all endpoint accessed");
-
   try {
     await Course.deleteMany({});
     await User.deleteMany({});
 
     logger.success("All courses and users deleted successfully");
     logger.database("DELETE", "courses", "All courses deleted");
-    logger.database("DELETE", "users", "All users deleted");
+    logger.database("DELETE", "users", "All users deleted");    // Broadcast course count update (should be 0)
+    req.broadcastCourseCount();
+    if (req.broadcastCourseStatistics) {
+      req.broadcastCourseStatistics();
+    }
 
     logger.request("POST", "/admin/reset/all", clientIP, 200);
     return res
@@ -181,12 +197,15 @@ app.post("/reset/courses", async (req, res) => {
     true,
     "Reset courses endpoint accessed"
   );
-
   try {
     await Course.deleteMany({});
 
     logger.success("All courses deleted successfully");
-    logger.database("DELETE", "courses", "All courses deleted");
+    logger.database("DELETE", "courses", "All courses deleted");    // Broadcast course count update (should be 0)
+    req.broadcastCourseCount();
+    if (req.broadcastCourseStatistics) {
+      req.broadcastCourseStatistics();
+    }
 
     logger.request("POST", "/admin/reset/courses", clientIP, 200);
     return res.status(200).send("All courses have been reset successfully.");
@@ -257,23 +276,33 @@ app.post("/users", async (req, res) => {
                 <td colspan="6" class="border px-4 py-2 text-center">--</td>
             </tr>
             `);
+        }
+        
+    function titleCase(str) {
+        if (!str) return str;
+        return str
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
     }
-
     // Format users data as HTML table rows for htmx
     const tableRows = users
       .map(
         (user) => `
             <tr>
                 <td class="border px-4 py-2">${user._id}</td>
-                <td class="border px-4 py-2">${user.name}</td>
+                <td class="border px-4 py-2">${titleCase(user.name)}</td>
                 <td class="border px-4 py-2">${user.email}</td>
-                <td class="border px-4 py-2">${user.registerId}</td>
-                <td class="border px-4 py-2">${user.department || "N/A"}</td>
-                <td class="border px-4 py-2">${user.optedCourse || "N/A"}</td>
+                <td class="border px-4 py-2">${user.registerId.toUpperCase()}</td>
+                <td class="border px-4 py-2">${user.department.toUpperCase()}</td>
+                <td class="border px-4 py-2">${user.optedCourse.toUpperCase() || "N/A"}</td>
             </tr>
         `
       )
       .join("");
+
+    // Helper function to convert string to title case
 
     logger.success("Users data formatted and sent successfully");
     logger.request("GET", "/admin/users", clientIP, 200);
@@ -345,7 +374,7 @@ app.post("/users/csv", async (req, res) => {
           `"${user.name}"`,
           `"${user.email}"`,
           `"${user.registerId}"`,
-          `"${user.department || "N/A"}"`,
+          `"${user.department.toUpperCase() || "N/A"}"`,
           `"${user.optedCourse || "N/A"}"`,
         ].join(",");
       })
@@ -376,6 +405,73 @@ app.post("/users/csv", async (req, res) => {
       .send(
         '<button class="px-4 py-2 bg-red-500 text-white">Export Failed</button>'
       );
+  }
+});
+
+// Get course statistics
+app.post("/courses", async (req, res) => {
+  const clientIP = req.ip;
+
+  logger.request("POST", "/admin/courses", clientIP);
+
+  if (req.headers.authorization !== process.env.SECRETKEY) {
+    logger.auth(
+      "ADMIN_ACCESS",
+      clientIP,
+      false,
+      "Invalid secret key for courses endpoint"
+    );
+    return res.status(401).send("Unauthorized");
+  }
+
+  logger.auth("ADMIN_ACCESS", clientIP, true, "Course statistics data access");
+
+  try {
+    const courses = await Course.find({});
+    logger.info(`Retrieved ${courses.length} courses from database`);
+    logger.database("READ", "courses", `Count: ${courses.length}`);
+
+    if (courses.length === 0) {
+      logger.warn("No courses found in the database");
+      logger.request("POST", "/admin/courses", clientIP, 200);
+      return res.status(200).send(`
+            <tr>
+                <td colspan="7" class="border px-4 py-2 text-center">No courses available</td>
+            </tr>
+            `);
+    }
+
+ 
+
+    // Format courses data as HTML table rows for htmx
+    const tableRows = courses
+      .map(
+        (course) => `
+            <tr id="course-row-${course.courseCode}">
+                <td class="border px-4 py-2">${course.courseCode.toUpperCase()}</td>
+                <td class="border px-4 py-2">${titleCase(course.courseName)}</td>
+                <td class="border px-4 py-2">${course.offeringDepartment.toUpperCase()}</td>
+                <td class="border px-4 py-2" id="seats-${course.courseCode}">${course.seatsAvailable}</td>
+                <td class="border px-4 py-2" id="enrolled-${course.courseCode}">${course.enrolledStudents.length}</td>
+                <td class="border px-4 py-2" id="total-capacity-${course.courseCode}">${course.seatsAvailable + course.enrolledStudents.length}</td>
+                <td class="border px-4 py-2">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${((course.enrolledStudents.length / (course.seatsAvailable + course.enrolledStudents.length)) * 100).toFixed(1)}%"></div>
+                    </div>
+                    <span class="text-xs text-gray-600" id="percentage-${course.courseCode}">${((course.enrolledStudents.length / (course.seatsAvailable + course.enrolledStudents.length)) * 100).toFixed(1)}%</span>
+                </td>
+            </tr>
+        `
+      )
+      .join("");
+
+    logger.success("Course statistics data formatted and sent successfully");
+    logger.request("POST", "/admin/courses", clientIP, 200);
+    return res.status(200).send(tableRows);
+  } catch (error) {
+    logger.error("Error fetching courses:", error);
+    logger.request("POST", "/admin/courses", clientIP, 500);
+    return res.status(500).send("Internal Server Error");
   }
 });
 
