@@ -29,9 +29,6 @@ app.use((req, res, next) => {
 });
 
 // ✅ Routes
-app.get("/", (req, res) => {
-  res.send("Hello World up");
-});
 
 app.use("/courses", require("./routes/course.route"));
 app.use("/admin", require("./routes/admin.route"));
