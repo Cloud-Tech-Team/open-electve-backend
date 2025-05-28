@@ -1,4 +1,5 @@
 const app = require("express").Router();
+const express = require("express");
 const Course = require("../models/course.model");
 
 app.post("/create", async (req, res) => {
